@@ -7,9 +7,11 @@ All designs are built using FreeCAD.
 ## Coffee table
 
 **Files**
+
 [coffee_table.FCStd](coffee_table/coffee_table.FCStd)
 
 **Parameters**
+
 The following design parameters are modifiable using the embedded worksheet:
 
  - Table height
@@ -26,9 +28,11 @@ The following design parameters are modifiable using the embedded worksheet:
 ## Terrace Bench
 
 **Files**
+
 [terrace_bench.FCStd](terrace_bench/terrace_bench.FCStd)
 
 **Parameters**
+
 The following design parameters are modifiable using the embedded worksheet:
 
  - Bench height
@@ -37,6 +41,7 @@ The following design parameters are modifiable using the embedded worksheet:
  - Lumber width (only square profile)
 
 **Design file**
+
 [terrace_bench_01.pdf](terrace_bench/terrace_bench_01.pdf)
 
 **Result**
