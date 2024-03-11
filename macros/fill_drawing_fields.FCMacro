@@ -1,0 +1,35 @@
+import FreeCAD
+
+# Get the active document
+doc = FreeCAD.ActiveDocument
+
+availableSheets = doc.findObjects("Spreadsheet::Sheet")
+dimensionSheet = availableSheets[0]
+
+# Check if the document is not empty
+if doc is not None:
+    # Iterate through all pages in the TechDraw Workbench
+    pages = doc.findObjects("TechDraw::DrawPage")
+    pageNumber = 1
+    for page in pages:
+        templateTexts = page.Template.EditableTexts
+        # Change the title of each page
+        templateTexts["FC-Title"] = dimensionSheet.project_title
+        templateTexts["Designed_by_Name"] = dimensionSheet.project_author
+        templateTexts["Subtitle"] = page.Label
+        templateTexts["FC-Date"] = dimensionSheet.project_date
+        templateTexts["FC-SH"] = str(pageNumber)
+        templateTexts["FC-SC"] = str(page.Scale)
+        templateTexts["Weight"] = ""
+        templateTexts["Drawing_number"] = dimensionSheet.project_code
+        pageNumber = pageNumber + 1
+        page.Template.EditableTexts = templateTexts
+    views = doc.findObjects("TechDraw::DrawViewPart")
+    for view in views:
+        view.CoarseView = True	
+    # Save the document
+    doc.recompute()
+    doc.save()
+
+else:
+    print("No active document.")

@@ -1,0 +1,38 @@
+import FreeCAD
+import TechDrawGui
+import os
+
+# Get the active document
+doc = FreeCAD.ActiveDocument
+
+availableSheets = doc.findObjects("Spreadsheet::Sheet")
+dimensionSheet = availableSheets[0]
+outputFileName = '{}.pdf'.format(dimensionSheet.project_code)
+print(outputFileName)
+
+directory='svg'
+if not os.path.exists(directory):
+    os.makedirs(directory)
+
+# Check if the document is not empty
+if doc is not None:
+  # Iterate through all pages in the TechDraw Workbench
+  pages = doc.findObjects("TechDraw::DrawPage")
+  pdfFileNames = []
+  for page in pages:
+    templateTexts = page.Template.EditableTexts
+    # 
+    svgFileName = '{}/{}_{}.svg'.format(directory,templateTexts["Drawing_number"], templateTexts["FC-SH"])
+    print(svgFileName)
+    TechDrawGui.exportPageAsSvg(page,svgFileName)
+    pdfFileName = '{}/{}_{}.pdf'.format(directory,templateTexts["Drawing_number"], templateTexts["FC-SH"])
+    TechDrawGui.exportPageAsPdf(page,pdfFileName)
+    pdfFileNames.append(pdfFileName)
+  pdftkCommand = f"pdftk {' '.join(pdfFileNames)} output {outputFileName}"
+  print(pdftkCommand)
+  os.system(pdftkCommand)
+  for pdfFileName in pdfFileNames:
+    os.remove(pdfFileName)
+  
+else:
+    print("No active document.")
