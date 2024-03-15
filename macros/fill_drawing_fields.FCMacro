@@ -8,6 +8,10 @@ dimensionSheet = availableSheets[0]
 
 # Check if the document is not empty
 if doc is not None:
+    # Remplace each drawing template with own template
+    templates = doc.findObjects("TechDraw::DrawSVGTemplate")
+    for template in templates:
+        template.Template = "../templates/A4_LandscapeTD.svg"
     # Iterate through all pages in the TechDraw Workbench
     pages = doc.findObjects("TechDraw::DrawPage")
     pageNumber = 1
@@ -20,13 +24,14 @@ if doc is not None:
         templateTexts["FC-Date"] = dimensionSheet.project_date
         templateTexts["FC-SH"] = str(pageNumber)
         templateTexts["FC-SC"] = str(page.Scale)
-        templateTexts["Weight"] = ""
+        # templateTexts["Quantity"] = "1"
         templateTexts["Drawing_number"] = dimensionSheet.project_code
         pageNumber = pageNumber + 1
         page.Template.EditableTexts = templateTexts
+    # Add coarse view to each object
     views = doc.findObjects("TechDraw::DrawViewPart")
     for view in views:
-        view.CoarseView = True	
+        view.CoarseView = True
     # Save the document
     doc.recompute()
     doc.save()
