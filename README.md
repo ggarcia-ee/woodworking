@@ -19,7 +19,7 @@ The following design parameters are modifiable using the embedded worksheet:
  - Center tile dimensions (only square tiles)
 
 **Design file**
-[coffee_table.pdf](coffee_table/coffee_table.pdf)
+[coffee_table_01.pdf](coffee_table/coffee_table_01.pdf)
 
 **Result**
 ![coffee_table](coffee_table/images/IMG_20240222_071935.jpg)
