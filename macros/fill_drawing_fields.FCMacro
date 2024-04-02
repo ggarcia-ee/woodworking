@@ -28,10 +28,12 @@ if doc is not None:
         templateTexts["Drawing_number"] = dimensionSheet.project_code
         pageNumber = pageNumber + 1
         page.Template.EditableTexts = templateTexts
-    # Add coarse view to each object
+    # Add ArcCenterMarks to each object
     views = doc.findObjects("TechDraw::DrawViewPart")
     for view in views:
-        view.CoarseView = True
+       view.ViewObject.ArcCenterMarks = True
+       view.CoarseView = False
+
     # Save the document
     doc.recompute()
     doc.save()
