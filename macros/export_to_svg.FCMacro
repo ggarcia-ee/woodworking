@@ -17,7 +17,8 @@ if not os.path.exists(directory):
 # Check if the document is not empty
 if doc is not None:
   # Iterate through all pages in the TechDraw Workbench
-  pages = doc.findObjects("TechDraw::DrawPage")
+  # pages = doc.findObjects("TechDraw::DrawPage")
+  pages = doc.getObjectsByLabel("drawings")[0].Group
   pdfFileNames = []
   for page in pages:
     templateTexts = page.Template.EditableTexts
@@ -33,6 +34,6 @@ if doc is not None:
   os.system(pdftkCommand)
   for pdfFileName in pdfFileNames:
     os.remove(pdfFileName)
-  
+  os.startfile(outputFileName, 'open')
 else:
     print("No active document.")

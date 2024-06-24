@@ -13,7 +13,8 @@ if doc is not None:
     for template in templates:
         template.Template = "../templates/A4_LandscapeTD.svg"
     # Iterate through all pages in the TechDraw Workbench
-    pages = doc.findObjects("TechDraw::DrawPage")
+    # pages = doc.findObjects("TechDraw::DrawPage")
+    pages = doc.getObjectsByLabel("drawings")[0].Group
     pageNumber = 1
     for page in pages:
         templateTexts = page.Template.EditableTexts
