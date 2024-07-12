@@ -18,12 +18,22 @@ The following design parameters are modifiable using the embedded worksheet:
  - Lumber width (only square profile)
  - Center tile dimensions (only square tiles)
 
+### Large version
+
 **Design file**
 [coffee_table_01.pdf](coffee_table/coffee_table_01.pdf)
 
 **Result**
 ![coffee_table](coffee_table/images/IMG_20240222_071935.jpg)
 
+
+### Small version
+
+**Design file**
+[coffee_table_02.pdf](coffee_table_small/coffee_table_02.pdf)
+
+**Result**
+![coffee_table](coffee_table_small/images/IMG_20240331_112910.jpg)
 
 ## Terrace Bench
 
