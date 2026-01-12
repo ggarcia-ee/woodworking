@@ -1,6 +1,127 @@
 import FreeCAD
 import TechDrawGui
 import os
+import re
+import glob
+
+def get_spreadsheet_dimensions(sheet):
+    """Extract all dimensions from the spreadsheet as a list of (name, value, unit) tuples."""
+    dimensions = []
+    
+    # Get all properties that represent cell contents
+    cells = {}
+    for prop in sheet.PropertiesList:
+        # Match cell addresses like A1, B2, etc.
+        match = re.match(r'^([A-Z]+)(\d+)$', prop)
+        if match:
+            col = match.group(1)
+            row = int(match.group(2))
+            value = getattr(sheet, prop, None)
+            if value is not None:
+                if row not in cells:
+                    cells[row] = {}
+                cells[row][col] = value
+    
+    # Process rows: assume column A is name, B is value (may include units)
+    for row in sorted(cells.keys()):
+        row_data = cells[row]
+        if 'A' in row_data and 'B' in row_data:
+            name = str(row_data['A'])
+            value = row_data['B']
+            # Skip header rows or empty names
+            if name and not name.lower() in ['name', 'parameter', 'variable', 'description']:
+                # Handle FreeCAD quantities (have Value and UserString attributes)
+                if hasattr(value, 'UserString'):
+                    dimensions.append((name, value.UserString))
+                elif hasattr(value, 'Value'):
+                    dimensions.append((name, str(value.Value)))
+                else:
+                    dimensions.append((name, str(value)))
+    
+    return dimensions
+
+def get_spreadsheet_metadata(sheet):
+    """Extract project metadata from spreadsheet."""
+    metadata = {}
+    # Common metadata fields that might be in the spreadsheet
+    for attr in ['project_code', 'project_name', 'author', 'date', 'description', 'title']:
+        if hasattr(sheet, attr):
+            metadata[attr] = getattr(sheet, attr)
+    return metadata
+
+def get_images_from_directory(images_dir='images'):
+    """Find all image files in the images directory."""
+    images = []
+    if os.path.exists(images_dir) and os.path.isdir(images_dir):
+        # Common image extensions
+        extensions = ['*.jpg', '*.jpeg', '*.png', '*.gif', '*.bmp', '*.webp']
+        for ext in extensions:
+            images.extend(glob.glob(os.path.join(images_dir, ext)))
+
+        # Sort images by filename
+        images.sort()
+    return images
+
+def generate_markdown(doc, dimensionSheet, outputFileName, freecadFileName, svgSections, directory, project_title=None):
+    """Generate a markdown file with dimensions table, links, and SVG sections."""
+    
+    metadata = get_spreadsheet_metadata(dimensionSheet)
+    dimensions = get_spreadsheet_dimensions(dimensionSheet)
+    
+    # Use provided project_title or fallback to metadata
+    if not project_title:
+        project_title = metadata.get('project_name', 
+                        metadata.get('title', 
+                        metadata.get('project_code', doc.Name)))
+    
+    md_content = []
+    
+    # Header
+    md_content.append(f"# {project_title}\n")
+    
+    # Links section
+    md_content.append("## Project Files\n")
+    md_content.append(f"- **FreeCAD File:** [{freecadFileName}]({freecadFileName})")
+    md_content.append(f"- **PDF Output:** [{outputFileName}]({outputFileName})\n")
+    
+    # Dimensions table
+    md_content.append("## Dimensions\n")
+    if dimensions:
+        md_content.append("| Parameter | Value |")
+        md_content.append("|-----------|-------|")
+        for name, value in dimensions:
+            md_content.append(f"| {name} | {value} |")
+        md_content.append("")
+    else:
+        md_content.append("*No dimensions found in spreadsheet.*\n")
+    
+    # SVG sections
+    md_content.append("## Drawings\n")
+    for section in svgSections:
+        svg_file = section['svg_file']
+        title = section.get('title', '')
+        sheet_num = section.get('sheet_num', '')
+        drawing_num = section.get('drawing_num', '')
+        
+        section_title = title if title else f"Sheet {sheet_num}"
+        md_content.append(f"### {section_title}\n")
+        if drawing_num:
+            md_content.append(f"**Drawing:** {drawing_num} | **Sheet:** {sheet_num}\n")
+        md_content.append(f"![{section_title}]({svg_file})\n")
+    
+    # Images section
+    images = get_images_from_directory()
+    if images:
+        md_content.append("## Images\n")
+        for image_path in images:
+            # Get filename without path for the alt text
+            image_name = os.path.basename(image_path)
+            # Create a readable title from filename (remove extension, replace underscores)
+            image_title = os.path.splitext(image_name)[0].replace('_', ' ').replace('-', ' ')
+            md_content.append(f"### {image_title}\n")
+            md_content.append(f"![{image_title}]({image_path})\n")
+    
+    return '\n'.join(md_content)
 
 # Get the active document
 doc = FreeCAD.ActiveDocument
@@ -8,32 +129,61 @@ doc = FreeCAD.ActiveDocument
 availableSheets = doc.findObjects("Spreadsheet::Sheet")
 dimensionSheet = availableSheets[0]
 outputFileName = '{}.pdf'.format(dimensionSheet.project_code)
-print(outputFileName)
+freecadFileName = os.path.basename(doc.FileName)
+print(f"Output PDF: {outputFileName}")
+print(f"FreeCAD file: {freecadFileName}")
 
-directory='svg'
+directory = 'svg'
 if not os.path.exists(directory):
     os.makedirs(directory)
 
 # Check if the document is not empty
 if doc is not None:
-  # Iterate through all pages in the TechDraw Workbench
-  # pages = doc.findObjects("TechDraw::DrawPage")
-  pages = doc.getObjectsByLabel("drawings")[0].Group
-  pdfFileNames = []
-  for page in pages:
-    templateTexts = page.Template.EditableTexts
-    # 
-    svgFileName = '{}/{}_{}.svg'.format(directory,templateTexts["Drawing_number"], templateTexts["FC-SH"])
-    print(svgFileName)
-    TechDrawGui.exportPageAsSvg(page,svgFileName)
-    pdfFileName = '{}/{}_{}.pdf'.format(directory,templateTexts["Drawing_number"], templateTexts["FC-SH"])
-    TechDrawGui.exportPageAsPdf(page,pdfFileName)
-    pdfFileNames.append(pdfFileName)
-  pdftkCommand = f"pdftk {' '.join(pdfFileNames)} output {outputFileName}"
-  print(pdftkCommand)
-  os.system(pdftkCommand)
-  for pdfFileName in pdfFileNames:
-    os.remove(pdfFileName)
-  os.startfile(outputFileName, 'open')
+    # Iterate through all pages in the TechDraw Workbench
+    pages = doc.getObjectsByLabel("drawings")[0].Group
+    pdfFileNames = []
+    svgSections = []
+    projectTitle = None
+    
+    for page in pages:
+        # Get project title from first page's FC-Title
+        if projectTitle is None:
+            projectTitle = page.Template.EditableTexts.get("FC-Title", "")
+        templateTexts = page.Template.EditableTexts
+        
+        svgFileName = '{}/{}_{}.svg'.format(directory, templateTexts["Drawing_number"], templateTexts["FC-SH"])
+        print(f"Exporting: {svgFileName}")
+        TechDrawGui.exportPageAsSvg(page, svgFileName)
+        
+        pdfFileName = '{}/{}_{}.pdf'.format(directory, templateTexts["Drawing_number"], templateTexts["FC-SH"])
+        TechDrawGui.exportPageAsPdf(page, pdfFileName)
+        pdfFileNames.append(pdfFileName)
+        
+        # Collect SVG section info for markdown
+        svgSections.append({
+            'svg_file': svgFileName,
+            'title': templateTexts.get("Subtitle", ""),
+            'sheet_num': templateTexts.get("FC-SH", ""),
+            'drawing_num': templateTexts.get("Drawing_number", "")
+        })
+    
+    # Combine PDFs
+    pdftkCommand = f"pdftk {' '.join(pdfFileNames)} output {outputFileName}"
+    print(pdftkCommand)
+    os.system(pdftkCommand)
+    
+    # Clean up individual PDFs
+    for pdfFileName in pdfFileNames:
+        os.remove(pdfFileName)
+    
+    # Generate markdown file
+    markdownFileName = '{}.md'.format(dimensionSheet.project_code)
+    markdownContent = generate_markdown(doc, dimensionSheet, outputFileName, freecadFileName, svgSections, directory, projectTitle)
+    with open(markdownFileName, 'w', encoding='utf-8') as f:
+        f.write(markdownContent)
+    print(f"Markdown generated: {markdownFileName}")
+    
+    # Open the PDF
+    os.startfile(outputFileName, 'open')
 else:
     print("No active document.")
